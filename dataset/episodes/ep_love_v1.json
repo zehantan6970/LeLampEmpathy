@@ -1,0 +1,48 @@
+{
+  "id": "ep_love_v1",
+  "human_input": {
+    "text": null,
+    "emotion": "love",
+    "valence": null,
+    "arousal": null,
+    "intensity": null
+  },
+  "fly_instinct": null,
+  "gamma": [
+    0.7,
+    0.1,
+    0.6
+  ],
+  "expression": {
+    "primitives": [
+      "lean",
+      "sway",
+      "breathe"
+    ],
+    "pose_seq": "episodes/ep_love_v1_pose.csv",
+    "led": {
+      "rgbw": [
+        255,
+        180,
+        120,
+        50
+      ],
+      "pattern": "breath",
+      "freq_hz": 0.2,
+      "intensity": [
+        30,
+        70
+      ]
+    },
+    "caption": "I am here for you.",
+    "tts_style": "soft-low"
+  },
+  "provenance": {
+    "source": "manual",
+    "source_url": null,
+    "license": "GPL-3.0",
+    "annotator": "workbuddy-b1-library",
+    "reviewed": false,
+    "collected_at": "2026-09-30"
+  }
+}

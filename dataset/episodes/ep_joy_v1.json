@@ -1,0 +1,48 @@
+{
+  "id": "ep_joy_v1",
+  "human_input": {
+    "text": null,
+    "emotion": "joy",
+    "valence": null,
+    "arousal": null,
+    "intensity": null
+  },
+  "fly_instinct": null,
+  "gamma": [
+    0.8,
+    0.2,
+    0.5
+  ],
+  "expression": {
+    "primitives": [
+      "nod",
+      "sway",
+      "nod"
+    ],
+    "pose_seq": "episodes/ep_joy_v1_pose.csv",
+    "led": {
+      "rgbw": [
+        255,
+        215,
+        0,
+        100
+      ],
+      "pattern": "double_pulse",
+      "freq_hz": 1.5,
+      "intensity": [
+        60,
+        100
+      ]
+    },
+    "caption": "Glad to interact with you!",
+    "tts_style": "bright-upbeat"
+  },
+  "provenance": {
+    "source": "manual",
+    "source_url": null,
+    "license": "GPL-3.0",
+    "annotator": "workbuddy-b1-library",
+    "reviewed": false,
+    "collected_at": "2026-09-30"
+  }
+}

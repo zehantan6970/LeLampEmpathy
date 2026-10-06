@@ -1,0 +1,21 @@
+# Secrets — never commit
+.env
+*.key
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Run artifacts
+logs/
+output/
+tools/live_audio/
+*.mp4
+
+# Third-party raw downloads (see data/external/ATTRIBUTION.md)
+data/external/
+
+# OS
+Thumbs.db
+.DS_Store

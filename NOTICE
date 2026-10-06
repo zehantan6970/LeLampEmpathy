@@ -1,0 +1,21 @@
+LeLampEmpathy — Third-Party Attributions
+=========================================
+
+This project vendors hardware description assets from the upstream LeLamp
+project:
+
+  - assets/lelamp_5dof.urdf, assets/lelamp_5dof.xml
+    Source: https://github.com/humancomputerlab/LeLamp (GPL-3.0)
+    3D-print / CAD sources: LeLamp repo /3D/ folder and OnShape project.
+
+Expressive-motion design vocabulary (kinesics / proxemics primitives) is
+adapted from:
+
+  - "ELEGNT: Expressive and Functional Movement Design for
+    Non-Anthropomorphic Robot" (arXiv:2501.12493).
+    Note: the ELEGNT authors have not released code or data; primitives
+    here are independent parametric implementations informed by the
+    paper's published motion vocabulary.
+
+Both upstream works remain under their original licenses. This project as a
+whole is released under GPL-3.0 (see LICENSE).

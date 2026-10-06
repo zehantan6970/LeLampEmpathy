@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeLamp Empathy — Episode Viewer</title>
+<style>
+  :root{
+    --bg:#14161c; --panel:#1c1f27; --panel2:#222633; --line:#2e3342;
+    --txt:#e6e9f0; --dim:#9aa3b5; --accent:#ffd75a;
+    --joy:#ffd75a; --love:#ff8f6b; --angry:#ff5040; --fear:#c03030;
+    --surprise:#f0f0f0; --sad:#6b7fd7; --neutral:#50cd50;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--txt); font:14px/1.45 "Segoe UI",Arial,sans-serif; height:100vh; display:flex; flex-direction:column; overflow:hidden;}
+  header{display:flex; align-items:center; gap:12px; padding:10px 16px; background:var(--panel); border-bottom:1px solid var(--line);}
+  header h1{font-size:16px; font-weight:600;}
+  header h1 span{color:var(--accent);}
+  .btn{background:var(--panel2); color:var(--txt); border:1px solid var(--line); border-radius:6px; padding:6px 12px; cursor:pointer; font-size:13px;}
+  .btn:hover{border-color:var(--accent);}
+  #fileInfo{color:var(--dim); font-size:12px;}
+  main{flex:1; display:flex; min-height:0;}
+  /* sidebar */
+  #side{width:320px; min-width:320px; background:var(--panel); border-right:1px solid var(--line); display:flex; flex-direction:column;}
+  #filters{padding:10px; border-bottom:1px solid var(--line);}
+  .chips{display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px;}
+  .chip{padding:3px 9px; border-radius:12px; border:1px solid var(--line); background:var(--panel2); color:var(--dim); font-size:12px; cursor:pointer;}
+  .chip.on{color:#111; font-weight:600;}
+  #searchRow{display:flex; gap:6px;}
+  #search{flex:1; background:var(--bg); border:1px solid var(--line); color:var(--txt); border-radius:6px; padding:5px 8px; font-size:13px;}
+  #splitSel{background:var(--bg); border:1px solid var(--line); color:var(--txt); border-radius:6px; padding:5px;}
+  #list{flex:1; overflow-y:auto;}
+  .ep{padding:8px 12px; border-bottom:1px solid var(--line); cursor:pointer;}
+  .ep:hover{background:var(--panel2);}
+  .ep.sel{background:#2a2f40; border-left:3px solid var(--accent);}
+  .ep .id{font-size:12px; color:var(--dim);}
+  .ep .scene{font-size:12.5px; color:var(--txt); margin-top:2px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+  .badge{display:inline-block; padding:1px 7px; border-radius:10px; font-size:11px; font-weight:600; color:#111; margin-right:5px;}
+  .conf{font-size:10px; color:#ffb347; border:1px solid #ffb347; border-radius:8px; padding:0 5px;}
+  /* stage */
+  #stage{flex:1; display:flex; flex-direction:column; min-width:0;}
+  #info{padding:10px 16px; background:var(--panel); border-bottom:1px solid var(--line); font-size:13px; max-height:180px; overflow-y:auto;}
+  #info .row{margin:3px 0;}
+  #info .k{color:var(--dim); display:inline-block; width:110px;}
+  #canvasWrap{flex:1; position:relative; min-height:0;}
+  canvas{position:absolute; inset:0; width:100%; height:100%;}
+  #transport{display:flex; align-items:center; gap:10px; padding:8px 16px; background:var(--panel); border-top:1px solid var(--line);}
+  #tSlider{flex:1;}
+  #tLabel{font-size:12px; color:var(--dim); min-width:90px; text-align:right;}
+  #dropHint{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--dim); font-size:15px; text-align:center; pointer-events:none; padding:20px;}
+</style>
+</head>
+<body>
+<header>
+  <h1>LeLamp Empathy — <span>Episode Viewer</span></h1>
+  <button class="btn" id="loadBtn">Load .jsonl / playlist</button>
+  <input type="file" id="fileInput" accept=".jsonl,.json" style="display:none">
+  <span id="fileInfo">no dataset loaded</span>
+</header>
+<main>
+  <div id="side">
+    <div id="filters">
+      <div class="chips" id="emoChips"></div>
+      <div id="searchRow">
+        <input id="search" placeholder="search id / scene / emotion / ED label…">
+        <select id="splitSel"><option value="">all splits</option><option value="train">train</option><option value="test">test</option></select>
+      </div>
+    </div>
+    <div id="list"></div>
+  </div>
+  <div id="stage">
+    <div id="info"><span style="color:var(--dim)">Load a dataset and pick an episode.</span></div>
+    <div id="canvasWrap">
+      <canvas id="cv"></canvas>
+      <div id="dropHint">Drop a <b>.jsonl</b> episode file here<br>(e.g. data/episodes/episodes_v3.jsonl or qc/qc_v3_sample21.jsonl)<br><br>…or load <b>qc/transition_demo_seq.json</b> (playlist) to watch emotion→emotion transitions</div>
+    </div>
+    <div id="transport">
+      <button class="btn" id="playBtn">▶ Play</button>
+      <input type="range" id="tSlider" min="0" max="1000" value="0">
+      <select id="speedSel" class="btn"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
+      <label style="font-size:12px;color:var(--dim)"><input type="checkbox" id="loopChk" checked> loop</label>
+      <label style="font-size:12px;color:var(--dim)" title="Auto-advance through filtered episodes with rate-limited pose blending + 0.5s LED crossfade (contract v1.2 §transition)"><input type="checkbox" id="playAllChk"> play all w/ transitions</label>
+      <span id="tLabel">0.00 / 0.00 s</span>
+    </div>
+  </div>
+</main>
+
+<script>
+"use strict";
+/* ---------------- FK chain (validated against pybullet 2026-10-03, err < 1e-9 on joint frames)
+   URDF chain: world_fixed T(0,0,0.05) → J1 T(0,0,0.05)Rz(q0) → J2 T(0,0,0.05)Ry(q1)
+   → J3 T(0,0,0.30)Ry(q2) → J4 T(0,0,0.25)Rx(q3) → J5 T(0,0,0.02)Ry(q4) ; head +x ---------- */
+function tM(o){return [[1,0,0,o[0]],[0,1,0,o[1]],[0,0,1,o[2]],[0,0,0,1]];}
+function rzM(a){const c=Math.cos(a),s=Math.sin(a);return [[c,-s,0,0],[s,c,0,0],[0,0,1,0],[0,0,0,1]];}
+function ryM(a){const c=Math.cos(a),s=Math.sin(a);return [[c,0,s,0],[0,1,0,0],[-s,0,c,0],[0,0,0,1]];}
+function rxM(a){const c=Math.cos(a),s=Math.sin(a);return [[1,0,0,0],[0,c,-s,0],[0,s,c,0],[0,0,0,1]];}
+function mm(A,B){const C=[];for(let i=0;i<4;i++){C.push([]);for(let j=0;j<4;j++){let s=0;for(let k=0;k<4;k++)s+=A[i][k]*B[k][j];C[i].push(s);}}return C;}
+function mv(M,v){return [M[0][0]*v[0]+M[0][1]*v[1]+M[0][2]*v[2]+M[0][3],
+                         M[1][0]*v[0]+M[1][1]*v[1]+M[1][2]*v[2]+M[1][3],
+                         M[2][0]*v[0]+M[2][1]*v[1]+M[2][2]*v[2]+M[2][3]];}
+function fk(q){ // q = [base_yaw, base_pitch, elbow_pitch, wrist_roll, wrist_pitch]
+  let F=tM([0,0,0.05]); const pts=[];
+  F=mm(F,mm(tM([0,0,0.05]),rzM(q[0]))); pts.push([F[0][3],F[1][3],F[2][3]]); // J1
+  F=mm(F,mm(tM([0,0,0.05]),ryM(q[1]))); pts.push([F[0][3],F[1][3],F[2][3]]); // J2
+  F=mm(F,mm(tM([0,0,0.30]),ryM(q[2]))); pts.push([F[0][3],F[1][3],F[2][3]]); // J3
+  F=mm(F,mm(tM([0,0,0.25]),rxM(q[3]))); pts.push([F[0][3],F[1][3],F[2][3]]); // J4
+  F=mm(F,mm(tM([0,0,0.02]),ryM(q[4]))); pts.push([F[0][3],F[1][3],F[2][3]]); // J5 / lamp_head frame
+  const face=mv(F,[0.075,0,0]);                       // LED face centre
+  const fin =mv(F,[-0.01,0,0.055]);                   // cooling fin (asymmetry marker)
+  const xdir=[F[0][0],F[1][0],F[2][0]];               // head +x (face normal)
+  return {pts,face,fin,xdir};
+}
+/* ---------------- camera (orbit, perspective) ---------------- */
+const CAM={tx:0,ty:0,tz:0.32, dist:0.95, yaw:35*Math.PI/180, pitch:16*Math.PI/180, fov:45*Math.PI/180};
+let VW=800,VH=600;
+function project(p){
+  const cy=Math.cos(CAM.yaw),sy=Math.sin(CAM.yaw),cp=Math.cos(CAM.pitch),sp=Math.sin(CAM.pitch);
+  const ex=CAM.tx+CAM.dist*cp*cy, ey=CAM.ty+CAM.dist*cp*sy, ez=CAM.tz+CAM.dist*sp;
+  // view basis: forward = target-eye
+  let fx=CAM.tx-ex, fy=CAM.ty-ey, fz=CAM.tz-ez;
+  const fl=Math.hypot(fx,fy,fz); fx/=fl; fy/=fl; fz/=fl;
+  // right = f × up(0,0,1)
+  let rx=fy*1-fz*0, ry=fz*0-fx*1, rz=fx*0-fy*0;
+  const rl=Math.hypot(rx,ry,rz)||1; rx/=rl; ry/=rl; rz/=rl;
+  const ux=ry*fz-rz*fy, uy=rz*fx-rx*fz, uz=rx*fy-ry*fx;
+  const dx=p[0]-ex, dy=p[1]-ey, dz=p[2]-ez;
+  const vx=dx*rx+dy*ry+dz*rz, vy=dx*ux+dy*uy+dz*uz, vz=dx*fx+dy*fy+dz*fz;
+  const f=0.5*VH/Math.tan(CAM.fov/2);
+  return [VW/2 + vx*f/Math.max(0.05,vz), VH/2 - vy*f/Math.max(0.05,vz), vz];
+}
+/* ---------------- LED model (SK6812 RGBW, 24-ring) ---------------- */
+function ledBase([r,g,b,w]){return [Math.min(255,r+w*0.9),Math.min(255,g+w*0.9),Math.min(255,b+w*0.9)];}
+function ledBright(spec,t,i,n){
+  const f=spec.freq_hz||1, pat=spec.pattern||"solid";
+  const [lo,hi]=spec.intensity||[50,100];
+  let b=1;
+  if(pat==="solid") b=1;
+  else if(pat==="breath") b=0.5-0.5*Math.cos(2*Math.PI*f*t);
+  else if(pat==="pulse") b=Math.pow(0.5-0.5*Math.cos(2*Math.PI*f*t),1.2);
+  else if(pat==="double_pulse"){const s=2*Math.PI*f*t;
+    b=Math.pow(Math.max(0,Math.sin(s)),2)+0.65*Math.pow(Math.max(0,Math.sin(s-1.0)),2); b=Math.min(1,b);}
+  else if(pat==="strobe"){
+    // 数据集 strobe 常配 intensity=[100,100]（全亮度频闪），须忽略 lo 直接乘以亮灭占空
+    b=(Math.sin(2*Math.PI*f*t)>0)?1:0.06;
+    return b*hi/100;
+  }
+  else if(pat==="chase"){const pos=(f*t)%1; let d=Math.abs(i/n-pos); d=Math.min(d,1-d); b=Math.exp(-Math.pow(d*9,2));}
+  return (lo+(hi-lo)*b)/100;
+}
+/* ---------------- state ---------------- */
+let EPISODES=[], FILTERED=[], SEL=null, PLAY=false, TT=0, LAST=0;
+let PLSEQ=null, PLPENDING=null;   // playlist mode (make_transition.py output)
+const $=id=>document.getElementById(id);
+const cv=$("cv"), ctx=cv.getContext("2d");
+function resize(){const w=$("canvasWrap"); VW=w.clientWidth; VH=w.clientHeight;
+  cv.width=VW*devicePixelRatio; cv.height=VH*devicePixelRatio; ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);}
+addEventListener("resize",resize); resize();
+
+const EMO_COLORS={joy:"#ffd75a",love:"#ff8f6b",angry:"#ff5040",fear:"#c03030",
+                  surprise:"#f0f0f0",sad:"#6b7fd7",neutral:"#50cd50"};
+let emoFilter="";
+function buildChips(){
+  const emos=["",...new Set(EPISODES.map(e=>e.human_emotion))];
+  $("emoChips").innerHTML="";
+  emos.forEach(em=>{
+    const c=document.createElement("span");
+    c.className="chip"+((em===emoFilter)?" on":"");
+    c.textContent=em||"all";
+    if(em) c.style.borderColor=EMO_COLORS[em]||"#888";
+    if(em&&em===emoFilter) c.style.background=EMO_COLORS[em]||"#888";
+    if(!em&&emoFilter==="") {c.style.background="var(--accent)";}
+    c.onclick=()=>{emoFilter=em; buildChips(); applyFilter();};
+    $("emoChips").appendChild(c);
+  });
+}
+function applyFilter(){
+  const q=$("search").value.toLowerCase(), sp=$("splitSel").value;
+  FILTERED=EPISODES.filter(e=>
+    (!emoFilter||e.human_emotion===emoFilter)&&
+    (!sp||(e.split||"")===sp)&&
+    (!q||(e.episode_id+" "+(e.scene_text_en||"")+" "+(e.scene_text||"")+" "+
+          (e.human_emotion||"")+" "+((e.source&&e.source.ed_label)||"")).toLowerCase().includes(q)));
+  renderList();
+}
+function renderList(){
+  const L=$("list"); L.innerHTML="";
+  FILTERED.slice(0,400).forEach(e=>{
+    const d=document.createElement("div");
+    d.className="ep"+((SEL&&SEL.episode_id===e.episode_id)?" sel":"");
+    const col=EMO_COLORS[e.human_emotion]||"#888";
+    const conf=(e.source&&e.source.label_confidence==="low")?'<span class="conf">low-conf</span>':"";
+    d.innerHTML=`<div class="id"><span class="badge" style="background:${col}">${e.human_emotion}</span>${e.episode_id} <span style="opacity:.6">${e.split||""}</span> ${conf}</div>
+      <div class="scene">${esc(e.scene_text_en||e.scene_text||"")}</div>`;
+    d.onclick=()=>selectEp(e);
+    L.appendChild(d);
+  });
+  if(FILTERED.length>400){const m=document.createElement("div");m.style.padding="8px";m.style.color="var(--dim)";m.textContent=`… ${FILTERED.length-400} more (refine filter)`;L.appendChild(m);}
+}
+function esc(s){const d=document.createElement("div");d.textContent=s;return d.innerHTML;}
+function selectEp(e){
+  SEL=e; TRANS=null; TT=0; PLAY=true; $("playBtn").textContent="⏸ Pause";
+  const a=e.annotation||{}, s=e.source||{}, r=e.response||{}, tr=r.trajectory||{};
+  $("info").innerHTML=`
+    <div class="row"><span class="k">episode</span><b>${e.episode_id}</b>
+      <span class="badge" style="background:${EMO_COLORS[e.human_emotion]||"#888"}">${e.human_emotion}</span>
+      ${s.ed_label?`<span style="color:var(--dim)">← ED label "${s.ed_label}"</span>`:""}
+      ${s.label_confidence==="low"?'<span class="conf">low-confidence mapping</span>':""}</div>
+    <div class="row"><span class="k">scene (EN)</span>${esc(e.scene_text_en||"—")}</div>
+    ${e.scene_text?`<div class="row"><span class="k">scene (中文)</span>${esc(e.scene_text)}</div>`:""}
+    <div class="row"><span class="k">V / A / D</span>${a.valence??"—"} / ${a.arousal??"—"} / ${a.dominance??"—"}
+      <span style="color:var(--dim)">(${a.method||"?"}, coverage ${a.va_coverage??"—"})</span></div>
+    <div class="row"><span class="k">response</span>program <b>${r.program||"?"}</b> · primitives [${(r.primitives||[]).join(", ")}] · "${esc(r.caption||"")}"</div>
+    <div class="row"><span class="k">LED</span>${r.led?`rgbw(${r.led.rgbw.join(",")}) ${r.led.pattern} ${r.led.freq_hz}Hz`:"—"}
+      <span style="color:var(--dim)"> · ${tr.duration_s??"?"}s @ ${tr.hz??"?"}Hz · limits_ok=${e.quality?e.quality.limits_ok:"?"}</span></div>`;
+  renderList();
+}
+/* ---------------- rendering ---------------- */
+const DEFLED={rgbw:[255,255,255,0],pattern:"solid",freq_hz:1,intensity:[100,100]};
+function qAt(tr,t){
+  const q=tr.q, hz=tr.hz||10;
+  if(!q||!q.length) return [0,0,0,0,0];
+  const x=Math.min(Math.max(t*hz,0),q.length-1), i=Math.floor(x), f=x-i;
+  const a=q[i], b=q[Math.min(i+1,q.length-1)];
+  return a.map((v,k)=>v+(b[k]-v)*f);
+}
+/* draw one frame. faceCol: css rgb string; ringCol: fn(i)->css rgb string */
+function drawFrame(q, faceCol, ringCol, footLabel){
+  ctx.clearRect(0,0,VW,VH);
+  // ground grid
+  ctx.strokeStyle="#232838"; ctx.lineWidth=1;
+  for(let g=-4;g<=4;g++){
+    let a=project([g*0.1,-0.4,0]), b=project([g*0.1,0.4,0]);
+    ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();
+    a=project([-0.4,g*0.1,0]); b=project([0.4,g*0.1,0]);
+    ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();
+  }
+  const {pts,face,fin}=fk(q);
+  // base disc
+  ctx.strokeStyle="#3a4054"; ctx.lineWidth=2;
+  ctx.beginPath();
+  for(let i=0;i<=28;i++){const a=i/28*2*Math.PI;const p=project([0.10*Math.cos(a),0.10*Math.sin(a),0.075]);
+    i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]);}
+  ctx.stroke();
+  // links
+  const cols=["#8c99b3","#668cbf","#80b399","#bf9973","#d1804d"];
+  const chain=[[0,0,0.10],...pts];
+  for(let i=0;i<chain.length-1;i++){
+    const a=project(chain[i]), b=project(chain[i+1]);
+    ctx.strokeStyle=cols[Math.min(i,cols.length-1)]; ctx.lineWidth=9-i; ctx.lineCap="round";
+    ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();
+  }
+  // joints
+  chain.forEach(p3=>{const p=project(p3);ctx.fillStyle="#0d0f14";ctx.strokeStyle="#aab";
+    ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(p[0],p[1],4,0,7);ctx.fill();ctx.stroke();});
+  // head: neck → face, fin marker, LED face disc
+  const head=pts[4], pf=project(face), ph=project(head), pfin=project(fin);
+  ctx.strokeStyle="#d1804d";ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(ph[0],ph[1]);ctx.lineTo(pf[0],pf[1]);ctx.stroke();
+  ctx.fillStyle="#565b68";ctx.fillRect(pfin[0]-3,pfin[1]-3,6,6);
+  const R=Math.max(10, 2600/Math.max(0.05,pf[2])/100);
+  ctx.save(); ctx.shadowColor=faceCol; ctx.shadowBlur=22; 
+  ctx.fillStyle=faceCol; ctx.beginPath(); ctx.arc(pf[0],pf[1],R,0,7); ctx.fill(); ctx.restore();
+  ctx.strokeStyle="#00000055"; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(pf[0],pf[1],R,0,7); ctx.stroke();
+  // LED ring inset (24-LED SK6812)
+  const cx=VW-90, cy=VH-80, rr=52;
+  ctx.fillStyle="#ffffff18"; ctx.beginPath(); ctx.arc(cx,cy,rr+22,0,7); ctx.fill();
+  for(let i=0;i<24;i++){
+    const a=i/24*2*Math.PI-Math.PI/2;
+    ctx.fillStyle=ringCol(i);
+    ctx.beginPath(); ctx.arc(cx+rr*Math.cos(a),cy+rr*Math.sin(a),4.4,0,7); ctx.fill();
+  }
+  ctx.fillStyle="#9aa3b5"; ctx.font="11px sans-serif"; ctx.textAlign="center";
+  ctx.fillText(footLabel,cx,cy+rr+16);
+  // joint readout
+  ctx.fillStyle="#9aa3b5"; ctx.font="11px monospace"; ctx.textAlign="left";
+  const names=["yaw","pit1","pit2","roll","pit3"];
+  ctx.fillText("q(rad): "+q.map((v,i)=>names[i]+"="+v.toFixed(2)).join("  "),12,VH-10);
+}
+function ledCols(spec,t){
+  const base=ledBase((spec&&spec.rgbw)||[255,255,255,0]);
+  return {base, bright:i=>ledBright(spec||DEFLED,t,i,24)};
+}
+function drawArm(t){
+  const tr=SEL.response.trajectory, q=qAt(tr,t);
+  const spec=SEL.response.led||DEFLED;
+  const lc=ledCols(spec,t);
+  const faceCol=`rgb(${lc.base.map(v=>Math.round(v*lc.bright(0))).join(",")})`;
+  drawFrame(q,faceCol,i=>`rgb(${lc.base.map(v=>Math.round(v*lc.bright(i))).join(",")})`,
+            `${spec.pattern||""} ${spec.freq_hz||""}Hz`);
+}
+/* ---------------- R6 transition engine (contract v1.2 §transition) ---------------- */
+let TRANS=null; // {q0,q1|qTraj,t,dur,ledA,ledB,cfDur,next,label}
+function startTransition(nextEp, pre){
+  if(pre){  // precomputed transition from make_transition.py playlist
+    TRANS={qTraj:{q:pre.q,hz:pre.hz||50}, t:0,
+           dur:pre.duration_s||((pre.q?pre.q.length:1)/(pre.hz||50)),
+           ledA:(pre.led_crossfade&&pre.led_crossfade.from)||SEL.response.led||DEFLED,
+           ledB:(pre.led_crossfade&&pre.led_crossfade.to)||nextEp.response.led||DEFLED,
+           cfDur:(pre.led_crossfade&&pre.led_crossfade.duration_s)||0.5,
+           next:nextEp, label:pre.to_emotion||nextEp.human_emotion};
+    return;
+  }
+  const trA=SEL.response.trajectory;
+  const q0=qAt(trA,trA.duration_s||1), q1=qAt(nextEp.response.trajectory,0);
+  const dqmax=Math.max(...q0.map((v,i)=>Math.abs(v-q1[i])));
+  const fast=["fear","angry"].includes(nextEp.human_emotion);
+  const rate=fast?2.2:1.0, tmin=fast?0.4:0.8;   // urgent emotions cut faster
+  TRANS={q0,q1,t:0,dur:Math.max(tmin,dqmax/rate),
+         ledA:SEL.response.led||DEFLED, ledB:nextEp.response.led||DEFLED,
+         cfDur:0.5, next:nextEp, label:nextEp.human_emotion};
+}
+function drawTransition(){
+  let q;
+  if(TRANS.qTraj) q=qAt(TRANS.qTraj,TRANS.t);
+  else{const u=Math.min(1,TRANS.t/TRANS.dur), e=0.5-0.5*Math.cos(Math.PI*u);
+       q=TRANS.q0.map((v,i)=>v+(TRANS.q1[i]-v)*e);}
+  const cf=Math.min(1,TRANS.t/(TRANS.cfDur||0.5));   // LED crossfade
+  const la=ledCols(TRANS.ledA,TRANS.t), lb=ledCols(TRANS.ledB,TRANS.t);
+  const baseMix=la.base.map((v,k)=>v+(lb.base[k]-v)*cf);
+  const bMix=i=>la.bright(i)+(lb.bright(i)-la.bright(i))*cf;
+  const faceCol=`rgb(${baseMix.map(v=>Math.round(v*bMix(0))).join(",")})`;
+  drawFrame(q,faceCol,i=>`rgb(${baseMix.map(v=>Math.round(v*bMix(i))).join(",")})`,
+            `transition → ${TRANS.label}`);
+}
+/* ---------------- transport ---------------- */
+function tick(ts){
+  const dt=LAST?(ts-LAST)/1000*parseFloat($("speedSel").value):0; LAST=ts;
+  if(TRANS){
+    TRANS.t+=dt;
+    if(TRANS.t>=TRANS.dur){
+      const nx=TRANS.next; TRANS=null; selectEp(nx);   // selectEp resets PLAY/TT
+    }else{
+      drawTransition();
+      $("tLabel").textContent=`transition ${TRANS.t.toFixed(2)} / ${TRANS.dur.toFixed(2)} s`;
+    }
+  }else if(SEL){
+    const dur=SEL.response.trajectory.duration_s||1;
+    const win=(PLSEQ&&PLSEQ.windows&&PLSEQ.windows[SEL.episode_id])||null;
+    const tEnd=win?win[1]:dur;
+    if(win&&TT<win[0])TT=win[0];       // snap into playlist play-window
+    if(PLAY){TT+=dt;
+      if(TT>tEnd){
+        if($("playAllChk").checked){
+          let next=null, pre=null;
+          if(PLSEQ){   // playlist mode: use precomputed transitions in playlist order
+            const i=PLSEQ.items.findIndex(it=>it.ep.episode_id===SEL.episode_id);
+            if(i>=0){pre=PLSEQ.items[i].tr; next=PLSEQ.items[(i+1)%PLSEQ.items.length].ep;}
+          }
+          if(!next){
+            const idx=FILTERED.findIndex(e=>e.episode_id===SEL.episode_id);
+            next=FILTERED[(idx+1)%Math.max(1,FILTERED.length)];
+          }
+          if(next&&next.episode_id!==SEL.episode_id){startTransition(next,pre); TT=0;}
+          else TT=0;
+        }else if($("loopChk").checked)TT=0;
+        else{TT=dur;PLAY=false;$("playBtn").textContent="▶ Play";}
+      }}
+    if(!TRANS){
+      drawArm(TT);
+      $("tSlider").value=Math.round(1000*TT/dur);
+      $("tLabel").textContent=`${TT.toFixed(2)} / ${dur.toFixed(2)} s`;
+    }
+  }
+  requestAnimationFrame(tick);
+}
+$("playBtn").onclick=()=>{if(!SEL)return;PLAY=!PLAY;$("playBtn").textContent=PLAY?"⏸ Pause":"▶ Play";LAST=0;};
+$("tSlider").oninput=e=>{if(!SEL)return;const dur=SEL.response.trajectory.duration_s||1;TT=dur*e.target.value/1000;LAST=0;};
+$("search").oninput=applyFilter; $("splitSel").onchange=applyFilter;
+/* ---------------- loading ---------------- */
+function loadPlaylist(obj,name){
+  const byId={}; EPISODES.forEach(e=>byId[e.episode_id]=e);
+  const eps=obj.episodes.map(id=>byId[id]).filter(Boolean);
+  if(!eps.length){   // dataset not loaded yet — park it and ask
+    PLPENDING={obj,name};
+    $("fileInfo").textContent=`${name} — playlist (${obj.episodes.length} ids); now load episodes_v3.jsonl to resolve`;
+    $("dropHint").style.display="none";
+    return;
+  }
+  PLSEQ={items:eps.map((ep,i)=>({ep,tr:(obj.transitions&&obj.transitions[i])||null})),
+         windows:obj.windows||null, name};
+  emoFilter=""; $("search").value=""; buildChips();
+  FILTERED=eps.slice(); renderList();
+  selectEp(eps[0]);
+  $("playAllChk").checked=true;
+  $("fileInfo").textContent=`${name} — playlist: ${eps.map(e=>e.human_emotion).join(" → ")} · auto-plays with precomputed transitions`;
+}
+function loadText(txt,name){
+  try{   // playlist JSON from make_transition.py?
+    const obj=JSON.parse(txt);
+    if(obj&&obj.type==="playlist"&&Array.isArray(obj.episodes)){loadPlaylist(obj,name);return;}
+  }catch(_){}
+  const lines=txt.split(/\r?\n/).filter(l=>l.trim());
+  EPISODES=lines.map(l=>JSON.parse(l));
+  PLSEQ=null;
+  $("fileInfo").textContent=`${name} — ${EPISODES.length} episodes`;
+  $("dropHint").style.display="none";
+  emoFilter=""; $("search").value=""; buildChips(); applyFilter();
+  if(FILTERED.length) selectEp(FILTERED[0]);
+  if(PLPENDING){const p=PLPENDING;PLPENDING=null;loadPlaylist(p.obj,p.name);}
+}
+$("loadBtn").onclick=()=>$("fileInput").click();
+$("fileInput").onchange=e=>{const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();r.onload=()=>loadText(r.result,f.name);r.readAsText(f);};
+const wrap=$("canvasWrap");
+wrap.ondragover=e=>{e.preventDefault();};
+wrap.ondrop=e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(!f)return;
+  const r=new FileReader();r.onload=()=>loadText(r.result,f.name);r.readAsText(f);};
+// convenience when served over http from repo root:
+//   ?src=<path> loads that file; a playlist src auto-resolves episode ids
+//   against the default dataset; no param -> load default dataset
+const DEF_SRC="../data/episodes/episodes_v3.jsonl";
+const fetchTxt=u=>fetch(u).then(r=>r.ok?r.text():Promise.reject());
+const srcParam=new URLSearchParams(location.search).get("src");
+if(srcParam){
+  fetchTxt(srcParam).then(t=>{
+    let isPl=false; try{const o=JSON.parse(t); isPl=!!(o&&o.type==="playlist");}catch(_){}
+    loadText(t,srcParam.split("/").pop());
+    if(isPl&&PLPENDING)   // playlist needs the full dataset for id resolution
+      return fetchTxt(DEF_SRC).then(d=>loadText(d,"episodes_v3.jsonl (auto-resolve)"));
+  }).catch(()=>{});
+}else{
+  fetchTxt(DEF_SRC).then(t=>loadText(t,"episodes_v3.jsonl (auto)")).catch(()=>{});
+}
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>

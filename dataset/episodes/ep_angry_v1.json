@@ -1,0 +1,48 @@
+{
+  "id": "ep_angry_v1",
+  "human_input": {
+    "text": null,
+    "emotion": "angry",
+    "valence": null,
+    "arousal": null,
+    "intensity": null
+  },
+  "fly_instinct": null,
+  "gamma": [
+    0.3,
+    0.4,
+    0.9
+  ],
+  "expression": {
+    "primitives": [
+      "lean",
+      "nod",
+      "shake"
+    ],
+    "pose_seq": "episodes/ep_angry_v1_pose.csv",
+    "led": {
+      "rgbw": [
+        255,
+        40,
+        0,
+        0
+      ],
+      "pattern": "solid",
+      "freq_hz": 0.0,
+      "intensity": [
+        90,
+        100
+      ]
+    },
+    "caption": "Hey. Back off a little.",
+    "tts_style": "sharp-loud"
+  },
+  "provenance": {
+    "source": "manual",
+    "source_url": null,
+    "license": "GPL-3.0",
+    "annotator": "workbuddy-b1-library",
+    "reviewed": false,
+    "collected_at": "2026-09-30"
+  }
+}

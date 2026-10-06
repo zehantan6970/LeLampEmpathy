@@ -1,0 +1,48 @@
+{
+  "id": "ep_neutral_v1",
+  "human_input": {
+    "text": null,
+    "emotion": "neutral",
+    "valence": null,
+    "arousal": null,
+    "intensity": null
+  },
+  "fly_instinct": null,
+  "gamma": [
+    0.5,
+    0.5,
+    0.4
+  ],
+  "expression": {
+    "primitives": [
+      "scan",
+      "breathe",
+      "gaze_shift"
+    ],
+    "pose_seq": "episodes/ep_neutral_v1_pose.csv",
+    "led": {
+      "rgbw": [
+        50,
+        205,
+        50,
+        80
+      ],
+      "pattern": "chase",
+      "freq_hz": 0.5,
+      "intensity": [
+        50,
+        80
+      ]
+    },
+    "caption": "Exploring surroundings.",
+    "tts_style": "calm-flat"
+  },
+  "provenance": {
+    "source": "manual",
+    "source_url": null,
+    "license": "GPL-3.0",
+    "annotator": "workbuddy-b1-library",
+    "reviewed": false,
+    "collected_at": "2026-09-30"
+  }
+}

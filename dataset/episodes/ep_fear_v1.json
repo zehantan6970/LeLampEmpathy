@@ -1,0 +1,48 @@
+{
+  "id": "ep_fear_v1",
+  "human_input": {
+    "text": null,
+    "emotion": "fear",
+    "valence": null,
+    "arousal": null,
+    "intensity": null
+  },
+  "fly_instinct": null,
+  "gamma": [
+    0.8,
+    0.9,
+    0.2
+  ],
+  "expression": {
+    "primitives": [
+      "avoid",
+      "tremble",
+      "gaze_shift"
+    ],
+    "pose_seq": "episodes/ep_fear_v1_pose.csv",
+    "led": {
+      "rgbw": [
+        255,
+        0,
+        0,
+        0
+      ],
+      "pattern": "strobe",
+      "freq_hz": 9.0,
+      "intensity": [
+        100,
+        100
+      ]
+    },
+    "caption": "Watch out!",
+    "tts_style": "fast-high"
+  },
+  "provenance": {
+    "source": "manual",
+    "source_url": null,
+    "license": "GPL-3.0",
+    "annotator": "workbuddy-b1-library",
+    "reviewed": false,
+    "collected_at": "2026-09-30"
+  }
+}

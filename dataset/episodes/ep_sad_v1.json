@@ -1,0 +1,48 @@
+{
+  "id": "ep_sad_v1",
+  "human_input": {
+    "text": null,
+    "emotion": "sad",
+    "valence": null,
+    "arousal": null,
+    "intensity": null
+  },
+  "fly_instinct": null,
+  "gamma": [
+    0.1,
+    0.1,
+    0.8
+  ],
+  "expression": {
+    "primitives": [
+      "fold",
+      "groom",
+      "breathe"
+    ],
+    "pose_seq": "episodes/ep_sad_v1_pose.csv",
+    "led": {
+      "rgbw": [
+        40,
+        20,
+        80,
+        5
+      ],
+      "pattern": "breath",
+      "freq_hz": 0.1,
+      "intensity": [
+        5,
+        20
+      ]
+    },
+    "caption": "I feel you... take your time.",
+    "tts_style": "slow-low"
+  },
+  "provenance": {
+    "source": "manual",
+    "source_url": null,
+    "license": "GPL-3.0",
+    "annotator": "workbuddy-b1-library",
+    "reviewed": false,
+    "collected_at": "2026-09-30"
+  }
+}

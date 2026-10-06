@@ -1,0 +1,49 @@
+{
+  "id": "ep_surprise_v1",
+  "human_input": {
+    "text": null,
+    "emotion": "surprise",
+    "valence": null,
+    "arousal": null,
+    "intensity": null
+  },
+  "fly_instinct": null,
+  "gamma": [
+    0.7,
+    0.8,
+    0.3
+  ],
+  "expression": {
+    "primitives": [
+      "startle",
+      "hold",
+      "tremble",
+      "gaze_shift"
+    ],
+    "pose_seq": "episodes/ep_surprise_v1_pose.csv",
+    "led": {
+      "rgbw": [
+        255,
+        255,
+        255,
+        200
+      ],
+      "pattern": "strobe",
+      "freq_hz": 4.0,
+      "intensity": [
+        100,
+        100
+      ]
+    },
+    "caption": "Whoa! What was that?",
+    "tts_style": "sudden-high"
+  },
+  "provenance": {
+    "source": "manual",
+    "source_url": null,
+    "license": "GPL-3.0",
+    "annotator": "workbuddy-b1-library",
+    "reviewed": false,
+    "collected_at": "2026-09-30"
+  }
+}
